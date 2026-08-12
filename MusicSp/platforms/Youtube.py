@@ -6,13 +6,10 @@ import yt_dlp
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
 from py_yt import VideosSearch, Playlist
-import aiohttp
-
-API_URL = os.environ.get("SHRUTI_API_URL", "https://api.shrutibots.site")
-
-API_KEY = os.environ.get("SHRUTI_API_KEY", "ShrutiBotsOwabDnkvuR0UD9YX2zv8") ## Get This API KEY FROM TELEGRAM BOT USERNAME: @SHRUTIAPIBOT 
 
 DOWNLOAD_DIR = "downloads"
+
+COOKIES_FILE = "cookies.txt"  # agar cookies file nahi hai toh None kar dena
 
 
 def time_to_seconds(time):
@@ -20,37 +17,67 @@ def time_to_seconds(time):
     return sum(int(x) * 60 ** i for i, x in enumerate(reversed(stringt.split(":"))))
 
 
+def _ytdl_opts(fmt: str, outtmpl: str):
+    opts = {
+        "format": fmt,
+        "outtmpl": outtmpl,
+        "quiet": True,
+        "no_warnings": True,
+        "geo_bypass": True,
+        "nocheckcertificate": True,
+        "noplaylist": True,
+    }
+    if COOKIES_FILE and os.path.exists(COOKIES_FILE):
+        opts["cookiefile"] = COOKIES_FILE
+    return opts
+
+
+def _extract_and_download(link: str, video_id: str, video: bool):
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    ext = "mp4" if video else "mp3"
+    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.{ext}")
+
+    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+        return file_path
+
+    outtmpl = os.path.join(DOWNLOAD_DIR, f"{video_id}.%(ext)s")
+
+    if video:
+        fmt = "best[height<=?720][ext=mp4]/best"
+        opts = _ytdl_opts(fmt, outtmpl)
+    else:
+        fmt = "bestaudio/best"
+        opts = _ytdl_opts(fmt, outtmpl)
+        opts["postprocessors"] = [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ]
+
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([link])
+
+    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+        return file_path
+
+    # fallback: kabhi kabhi extension thodi alag ho sakti hai, folder check karo
+    for f in os.listdir(DOWNLOAD_DIR):
+        if f.startswith(video_id):
+            return os.path.join(DOWNLOAD_DIR, f)
+
+    return None
+
+
 async def download_song(link: str) -> str:
     video_id = link.split("v=")[-1].split("&")[0] if "v=" in link else link
     if not video_id or len(video_id) < 3:
         return None
-
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        return file_path
-
+    url = f"https://www.youtube.com/watch?v={video_id}" if "youtube.com" not in link and "youtu.be" not in link else link
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"{API_URL}/download",
-                params={"url": video_id, "type": "audio", "api_key": API_KEY},
-                timeout=aiohttp.ClientTimeout(total=300)
-            ) as resp:
-                if resp.status != 200:
-                    return None
-                with open(file_path, "wb") as f:
-                    async for chunk in resp.content.iter_chunked(131072):
-                        f.write(chunk)
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-            return file_path
-        return None
+        return await asyncio.to_thread(_extract_and_download, url, video_id, False)
     except Exception:
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception:
-                pass
         return None
 
 
@@ -58,33 +85,10 @@ async def download_video(link: str) -> str:
     video_id = link.split("v=")[-1].split("&")[0] if "v=" in link else link
     if not video_id or len(video_id) < 3:
         return None
-
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    file_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp4")
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        return file_path
-
+    url = f"https://www.youtube.com/watch?v={video_id}" if "youtube.com" not in link and "youtu.be" not in link else link
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"{API_URL}/download",
-                params={"url": video_id, "type": "video", "api_key": API_KEY},
-                timeout=aiohttp.ClientTimeout(total=600)
-            ) as resp:
-                if resp.status != 200:
-                    return None
-                with open(file_path, "wb") as f:
-                    async for chunk in resp.content.iter_chunked(131072):
-                        f.write(chunk)
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-            return file_path
-        return None
+        return await asyncio.to_thread(_extract_and_download, url, video_id, True)
     except Exception:
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception:
-                pass
         return None
 
 
@@ -218,6 +222,8 @@ class YouTubeAPI:
         if "&" in link:
             link = link.split("&")[0]
         ytdl_opts = {"quiet": True}
+        if COOKIES_FILE and os.path.exists(COOKIES_FILE):
+            ytdl_opts["cookiefile"] = COOKIES_FILE
         ydl = yt_dlp.YoutubeDL(ytdl_opts)
         with ydl:
             formats_available = []
