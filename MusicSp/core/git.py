@@ -48,47 +48,24 @@ def git():
             origin = repo.remote("origin")
         else:
             origin = repo.create_remote("origin", UPSTREAM_REPO)
-
-        try:
-            origin.fetch()
-        except GitCommandError as e:
-            LOGGER(__name__).warning(f"Git fetch failed: {e}")
-            return
-
-        # Crash-proof branch lookup: agar UPSTREAM_BRANCH galat/mismatch
-        # hai toh bot crash nahi hoga, sirf update-check skip karega.
-        try:
-            target_ref = origin.refs[config.UPSTREAM_BRANCH]
-        except IndexError:
-            available = [r.name for r in origin.refs]
-            LOGGER(__name__).warning(
-                f"Branch '{config.UPSTREAM_BRANCH}' not found in upstream repo. "
-                f"Available branches: {available}. "
-                f"Update config.UPSTREAM_BRANCH accordingly. Skipping auto-update."
-            )
-            return
-
-        if config.UPSTREAM_BRANCH not in repo.heads:
-            repo.create_head(config.UPSTREAM_BRANCH, target_ref)
-        repo.heads[config.UPSTREAM_BRANCH].set_tracking_branch(target_ref)
+        origin.fetch()
+        repo.create_head(
+            config.UPSTREAM_BRANCH,
+            origin.refs[config.UPSTREAM_BRANCH],
+        )
+        repo.heads[config.UPSTREAM_BRANCH].set_tracking_branch(
+            origin.refs[config.UPSTREAM_BRANCH]
+        )
         repo.heads[config.UPSTREAM_BRANCH].checkout(True)
-
         try:
             repo.create_remote("origin", config.UPSTREAM_REPO)
         except BaseException:
             pass
-
         nrs = repo.remote("origin")
-        try:
-            nrs.fetch(config.UPSTREAM_BRANCH)
-        except GitCommandError as e:
-            LOGGER(__name__).warning(f"Fetch of branch failed: {e}")
-            return
-
+        nrs.fetch(config.UPSTREAM_BRANCH)
         try:
             nrs.pull(config.UPSTREAM_BRANCH)
         except GitCommandError:
             repo.git.reset("--hard", "FETCH_HEAD")
-
         install_req("pip3 install --no-cache-dir -r requirements.txt")
         LOGGER(__name__).info(f"Fetching updates from upstream repository...")
