@@ -50,7 +50,7 @@ def private_panel(_):
             InlineKeyboardButton(text=_["S_B_6"], url=config.SUPPORT_CHANNEL,
                                  style=ButtonStyle.PRIMARY,
                                 ),
-            InlineKeyboardButton(text="˹ 𝖲𝗈𝗎𝗋𝖼𝖾𝖢𝗈𝖽𝖾 ˼", url="https://github.com/DevloperSP/MusicSp",
+            InlineKeyboardButton(text="˹ 𝖲𝗈𝗎𝗋𝖼𝖾𝖢𝗈𝖽𝖾 ˼", url="t.me/Oye_babyy",
                                   style=ButtonStyle.DANGER,
                                 ),
         ],
