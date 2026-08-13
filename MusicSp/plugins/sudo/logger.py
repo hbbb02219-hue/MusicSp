@@ -10,7 +10,7 @@ from MusicSp.utils.database import add_off, add_on
 from MusicSp.utils.decorators.language import language
 
 # ⚠️ Apna LOG group / channel ki ID yahan daalo (config.py se import bhi kar sakte ho)
-LOG_GROUP_ID = -1003716296507  # <-- ISKO APNI LOG GROUP ID SE REPLACE KARO
+LOG_GROUP_ID = -1001234567890  # <-- ISKO APNI LOG GROUP ID SE REPLACE KARO
 
 
 @app.on_message(filters.command(["logger"]) & SUDOERS)
@@ -38,7 +38,8 @@ async def cookies(client, message, _):
 
 
 # ----------------------------------------------------------------------
-# NEW: Bot jab kisi group me add hota hai to logger group me info bhejo
+# Bot jab kisi group me add hota hai to logger group me info bhejo
+# Ab quote (blockquote) style + spoiler (blur) formatting ke sath
 # ----------------------------------------------------------------------
 @app.on_chat_member_updated()
 async def bot_added_to_group(client, chat_member_updated: ChatMemberUpdated):
@@ -56,11 +57,12 @@ async def bot_added_to_group(client, chat_member_updated: ChatMemberUpdated):
         return
 
     try:
-        # Group ka invite link nikaalne ki koshish (agar bot ke paas permission hai)
         try:
             invite_link = await client.export_chat_invite_link(chat.id)
         except Exception:
-            invite_link = chat.username and f"https://t.me/{chat.username}" or "Link not available (private group / no permission)"
+            invite_link = (
+                f"https://t.me/{chat.username}" if chat.username else "Not available (private / no perm)"
+            )
 
         adder_name = added_by.first_name if added_by else "Unknown"
         adder_username = f"@{added_by.username}" if added_by and added_by.username else "No username"
@@ -69,18 +71,22 @@ async def bot_added_to_group(client, chat_member_updated: ChatMemberUpdated):
         members_count = await client.get_chat_members_count(chat.id)
 
         text = (
-            "**#NewGroup**\n\n"
-            f"**Group Name:** {chat.title}\n"
-            f"**Group ID:** `{chat.id}`\n"
-            f"**Group Link:** {invite_link}\n"
-            f"**Members Count:** {members_count}\n\n"
-            f"**Added By:** {adder_name}\n"
-            f"**Username:** {adder_username}\n"
-            f"**User ID:** `{adder_id}`\n\n"
-            f"**Time:** {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
+            "<b>🆕 #NewGroup</b>\n\n"
+            "<blockquote>"
+            f"<b>Group Name:</b> {chat.title}\n"
+            f"<b>Group ID:</b> <tg-spoiler><code>{chat.id}</code></tg-spoiler>\n"
+            f"<b>Group Link:</b> <tg-spoiler>{invite_link}</tg-spoiler>\n"
+            f"<b>Members Count:</b> {members_count}"
+            "</blockquote>\n\n"
+            "<blockquote>"
+            f"<b>Added By:</b> {adder_name}\n"
+            f"<b>Username:</b> {adder_username}\n"
+            f"<b>User ID:</b> <tg-spoiler><code>{adder_id}</code></tg-spoiler>"
+            "</blockquote>\n\n"
+            f"<b>Time:</b> {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
         )
 
-        await client.send_message(LOG_GROUP_ID, text)
+        await client.send_message(LOG_GROUP_ID, text, parse_mode=ParseMode.HTML)
 
     except Exception as e:
         try:
@@ -90,17 +96,17 @@ async def bot_added_to_group(client, chat_member_updated: ChatMemberUpdated):
 
 
 # ----------------------------------------------------------------------
-# NEW: Song play logger — quote style (blockquote) me log group me bhejo
-# Isko apne play.py / stream handler me call karna hai (neeche usage dekho)
+# Song play logger — quote (blockquote) + spoiler (blur) style
+# Isko apne play.py / stream handler me call karna hai
 # ----------------------------------------------------------------------
 async def song_play_logger(client, chat, user, song_name: str, duration: str = None, source: str = "YouTube"):
     """
-    client   -> pyrogram Client (app)
-    chat     -> group chat object (message.chat)
-    user     -> user object jisne gaana play kiya (message.from_user)
-    song_name-> gaane ka naam / title
-    duration -> optional, gaane ki duration (string, jaise "3:45")
-    source   -> optional, gaana kaha se aaya (YouTube / Spotify / File / etc.)
+    client    -> pyrogram Client (app)
+    chat      -> group chat object (message.chat)
+    user      -> user object jisne gaana play kiya (message.from_user)
+    song_name -> gaane ka naam / title
+    duration  -> optional, gaane ki duration (string, jaise "3:45")
+    source    -> optional, gaana kaha se aaya (YouTube / Spotify / File / etc.)
     """
     try:
         user_name = user.first_name if user else "Unknown"
@@ -110,15 +116,13 @@ async def song_play_logger(client, chat, user, song_name: str, duration: str = N
         group_name = chat.title if chat else "Unknown Group"
         group_id = chat.id if chat else "Unknown"
 
-        # Group ka link nikaalne ki koshish
         try:
             group_link = await client.export_chat_invite_link(chat.id)
         except Exception:
-            group_link = chat.username and f"https://t.me/{chat.username}" or "Private Group"
+            group_link = f"https://t.me/{chat.username}" if chat.username else "Private Group"
 
         duration_line = f"\n<b>Duration:</b> {duration}" if duration else ""
 
-        # Telegram native blockquote (HTML) -> "mst" quote box wala look
         text = (
             "<b>🎵 #NewSongPlayed</b>\n\n"
             "<blockquote>"
@@ -126,12 +130,16 @@ async def song_play_logger(client, chat, user, song_name: str, duration: str = N
             f"<b>Source:</b> {source}"
             f"{duration_line}"
             "</blockquote>\n\n"
+            "<blockquote>"
             f"<b>Group Name:</b> {group_name}\n"
-            f"<b>Group ID:</b> <code>{group_id}</code>\n"
-            f"<b>Group Link:</b> {group_link}\n\n"
+            f"<b>Group ID:</b> <tg-spoiler><code>{group_id}</code></tg-spoiler>\n"
+            f"<b>Group Link:</b> <tg-spoiler>{group_link}</tg-spoiler>"
+            "</blockquote>\n\n"
+            "<blockquote>"
             f"<b>Played By:</b> {user_name}\n"
             f"<b>Username:</b> {user_username}\n"
-            f"<b>User ID:</b> <code>{user_id}</code>\n\n"
+            f"<b>User ID:</b> <tg-spoiler><code>{user_id}</code></tg-spoiler>"
+            "</blockquote>\n\n"
             f"<b>Time:</b> {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
         )
 
