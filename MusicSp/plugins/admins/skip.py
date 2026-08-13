@@ -8,6 +8,7 @@ from MusicSp.misc import db
 from MusicSp.utils.database import get_loop
 from MusicSp.utils.decorators import AdminRightsCheck
 from MusicSp.utils.inline import close_markup, stream_markup
+from MusicSp.utils.logger import activity_logs
 from MusicSp.utils.stream.autoclear import auto_clean
 from MusicSp.utils.thumbnails import gen_thumb
 from config import BANNED_USERS
@@ -18,6 +19,7 @@ from config import BANNED_USERS
 )
 @AdminRightsCheck
 async def skip(cli, message: Message, _, chat_id):
+    await activity_logs(message, "Skip")
     if not len(message.command) < 2:
         loop = await get_loop(chat_id)
         if loop != 0:
