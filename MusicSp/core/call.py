@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Union
 
 from pyrogram import Client
-from pyrogram.types import InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, StreamType
 from pytgcalls.exceptions import (
     AlreadyJoinedError,
@@ -341,7 +341,25 @@ class Call(PyTgCalls):
                 await set_loop(chat_id, loop)
             await auto_clean(popped)
             if not check:
+                queue_end_chat_id = chat_id
+                if popped:
+                    queue_end_chat_id = popped.get("chat_id", chat_id)
                 await _clear_(chat_id)
+                try:
+                    language = await get_lang(queue_end_chat_id)
+                    _ = get_string(language)
+                    await app.send_message(
+                        chat_id=queue_end_chat_id,
+                        text=(
+                            "💮 <b>ᴛʜᴇ ǫᴜᴇᴜᴇ ʜᴀs ғɪɴɪsʜᴇᴅ.</b>\n\n"
+                            "💐 ᴜsᴇ /play ᴛᴏ ᴀᴅᴅ ᴍᴏʀᴇ sᴏɴɢs..!"
+                        ),
+                        reply_markup=InlineKeyboardMarkup(
+                            [[InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close")]]
+                        ),
+                    )
+                except Exception:
+                    pass
                 return await client.leave_group_call(chat_id)
         except:
             try:
