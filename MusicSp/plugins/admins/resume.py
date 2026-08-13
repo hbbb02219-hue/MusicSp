@@ -6,6 +6,7 @@ from MusicSp.core.call import DevSp
 from MusicSp.utils.database import is_music_playing, music_on
 from MusicSp.utils.decorators import AdminRightsCheck
 from MusicSp.utils.inline import close_markup
+from MusicSp.utils.logger import activity_logs
 from config import BANNED_USERS
 
 
@@ -14,6 +15,7 @@ from config import BANNED_USERS
 async def resume_com(cli, message: Message, _, chat_id):
     if await is_music_playing(chat_id):
         return await message.reply_text(_["admin_3"])
+    await activity_logs(message, "Resume")
     await music_on(chat_id)
     await DevSp.resume_stream(chat_id)
     await message.reply_text(
