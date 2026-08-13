@@ -10,7 +10,7 @@ from MusicSp.utils.database import add_off, add_on
 from MusicSp.utils.decorators.language import language
 
 # ⚠️ Apna LOG group / channel ki ID yahan daalo (config.py se import bhi kar sakte ho)
-LOG_GROUP_ID = -1001234567890  # <-- ISKO APNI LOG GROUP ID SE REPLACE KARO
+LOG_GROUP_ID = -1003716296507  # <-- ISKO APNI LOG GROUP ID SE REPLACE KARO
 
 
 @app.on_message(filters.command(["logger"]) & SUDOERS)
