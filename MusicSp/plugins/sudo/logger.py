@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from pyrogram import filters
+from pyrogram.enums import ParseMode
 from pyrogram.types import ChatMemberUpdated
 
 from MusicSp import app
@@ -84,5 +85,60 @@ async def bot_added_to_group(client, chat_member_updated: ChatMemberUpdated):
     except Exception as e:
         try:
             await client.send_message(LOG_GROUP_ID, f"⚠️ Error logging new group: {e}")
+        except Exception:
+            pass
+
+
+# ----------------------------------------------------------------------
+# NEW: Song play logger — quote style (blockquote) me log group me bhejo
+# Isko apne play.py / stream handler me call karna hai (neeche usage dekho)
+# ----------------------------------------------------------------------
+async def song_play_logger(client, chat, user, song_name: str, duration: str = None, source: str = "YouTube"):
+    """
+    client   -> pyrogram Client (app)
+    chat     -> group chat object (message.chat)
+    user     -> user object jisne gaana play kiya (message.from_user)
+    song_name-> gaane ka naam / title
+    duration -> optional, gaane ki duration (string, jaise "3:45")
+    source   -> optional, gaana kaha se aaya (YouTube / Spotify / File / etc.)
+    """
+    try:
+        user_name = user.first_name if user else "Unknown"
+        user_username = f"@{user.username}" if user and user.username else "No username"
+        user_id = user.id if user else "Unknown"
+
+        group_name = chat.title if chat else "Unknown Group"
+        group_id = chat.id if chat else "Unknown"
+
+        # Group ka link nikaalne ki koshish
+        try:
+            group_link = await client.export_chat_invite_link(chat.id)
+        except Exception:
+            group_link = chat.username and f"https://t.me/{chat.username}" or "Private Group"
+
+        duration_line = f"\n<b>Duration:</b> {duration}" if duration else ""
+
+        # Telegram native blockquote (HTML) -> "mst" quote box wala look
+        text = (
+            "<b>🎵 #NewSongPlayed</b>\n\n"
+            "<blockquote>"
+            f"<b>Song Name:</b> {song_name}\n"
+            f"<b>Source:</b> {source}"
+            f"{duration_line}"
+            "</blockquote>\n\n"
+            f"<b>Group Name:</b> {group_name}\n"
+            f"<b>Group ID:</b> <code>{group_id}</code>\n"
+            f"<b>Group Link:</b> {group_link}\n\n"
+            f"<b>Played By:</b> {user_name}\n"
+            f"<b>Username:</b> {user_username}\n"
+            f"<b>User ID:</b> <code>{user_id}</code>\n\n"
+            f"<b>Time:</b> {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
+        )
+
+        await client.send_message(LOG_GROUP_ID, text, parse_mode=ParseMode.HTML)
+
+    except Exception as e:
+        try:
+            await client.send_message(LOG_GROUP_ID, f"⚠️ Error logging song play: {e}")
         except Exception:
             pass
