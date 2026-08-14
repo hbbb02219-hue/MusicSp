@@ -22,6 +22,7 @@ from MusicSp.misc import db
 from MusicSp.utils.database import (
     add_active_chat,
     add_active_video_chat,
+    get_autoplay,
     get_lang,
     get_loop,
     group_assistant,
@@ -35,6 +36,7 @@ from MusicSp.utils.exceptions import AssistantErr
 from MusicSp.utils.formatters import check_duration, seconds_to_min, speed_converter
 from MusicSp.utils.inline.play import stream_markup
 from MusicSp.utils.stream.autoclear import auto_clean
+from MusicSp.utils.stream.queue import put_queue
 from MusicSp.utils.thumbnails import gen_thumb
 from strings import get_string
 
@@ -252,6 +254,79 @@ class Call(PyTgCalls):
             stream,
         )
 
+    async def _autoplay(self, client, chat_id, original_chat_id, popped):
+        """Tries to fetch and play a related song when the queue ends and Autoplay is ON.
+        Returns True if a new song was started, else False."""
+        try:
+            from py_yt import VideosSearch
+
+            title = popped.get("title") or ""
+            old_vidid = popped.get("vidid")
+            if not title:
+                return False
+
+            results = VideosSearch(title, limit=5)
+            data = (await results.next()).get("result", [])
+            pick = None
+            for result in data:
+                if result.get("id") and result["id"] != old_vidid:
+                    pick = result
+                    break
+            if not pick:
+                return False
+
+            vidid = pick["id"]
+            new_title = pick.get("title", title)
+            duration_min = pick.get("duration") or "0:00"
+
+            file_path, direct = await YouTube.download(vidid, None, videoid=True)
+            if not file_path:
+                return False
+
+            try:
+                image = await YouTube.thumbnail(vidid, True)
+            except Exception:
+                image = None
+
+            await self.skip_stream(chat_id, file_path, video=None, image=image)
+
+            db[chat_id] = []
+            await put_queue(
+                chat_id,
+                original_chat_id,
+                file_path if direct else f"index_{vidid}",
+                new_title,
+                duration_min,
+                "Autoplay",
+                vidid,
+                app.id,
+                "audio",
+            )
+
+            try:
+                language = await get_lang(original_chat_id)
+                _ = get_string(language)
+            except Exception:
+                _ = get_string("en")
+
+            img = await gen_thumb(vidid, original_chat_id)
+            button = stream_markup(_, chat_id)
+            run = await app.send_photo(
+                original_chat_id,
+                photo=img,
+                caption=(
+                    "🎵 <b>ᴀᴜᴛᴏᴘʟᴀʏ ᴀᴄᴛɪᴠᴀᴛᴇᴅ</b>\n\n"
+                    f"<b>ɴᴏᴡ ᴘʟᴀʏɪɴɢ :</b> {new_title[:40]}\n"
+                    f"<b>ᴅᴜʀᴀᴛɪᴏɴ :</b> {duration_min}"
+                ),
+                reply_markup=InlineKeyboardMarkup(button),
+            )
+            db[chat_id][0]["mystic"] = run
+            db[chat_id][0]["markup"] = "stream"
+            return True
+        except Exception:
+            return False
+
     async def seek_stream(self, chat_id, file_path, to_seek, duration, mode):
         assistant = await group_assistant(self, chat_id)
         stream = (
@@ -344,6 +419,14 @@ class Call(PyTgCalls):
                 queue_end_chat_id = chat_id
                 if popped:
                     queue_end_chat_id = popped.get("chat_id", chat_id)
+
+                if popped and await get_autoplay(chat_id):
+                    played = await self._autoplay(
+                        client, chat_id, queue_end_chat_id, popped
+                    )
+                    if played:
+                        return
+
                 await _clear_(chat_id)
                 try:
                     language = await get_lang(queue_end_chat_id)
