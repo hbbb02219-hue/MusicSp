@@ -25,6 +25,8 @@ playtypedb = mongodb.playtypedb
 skipdb = mongodb.skipmode
 sudoersdb = mongodb.sudoers
 usersdb = mongodb.tgusersdb
+autoplaydb = mongodb.autoplaymode
+thumbdb = mongodb.thumbmode
 
 # Shifting to memory [mongo sucks often]
 active = []
@@ -42,6 +44,8 @@ pause = {}
 playmode = {}
 playtype = {}
 skipmode = {}
+autoplaymode = {}
+thumbmode = {}
 
 
 async def get_assistant_number(chat_id: int) -> str:
@@ -299,6 +303,44 @@ async def get_playmode(chat_id: int) -> str:
 async def set_playmode(chat_id: int, mode: str):
     playmode[chat_id] = mode
     await playmodedb.update_one(
+        {"chat_id": chat_id}, {"$set": {"mode": mode}}, upsert=True
+    )
+
+
+async def get_autoplay(chat_id: int) -> bool:
+    mode = autoplaymode.get(chat_id)
+    if mode is None:
+        data = await autoplaydb.find_one({"chat_id": chat_id})
+        if not data:
+            autoplaymode[chat_id] = False
+            return False
+        autoplaymode[chat_id] = data["mode"]
+        return data["mode"]
+    return mode
+
+
+async def set_autoplay(chat_id: int, mode: bool):
+    autoplaymode[chat_id] = mode
+    await autoplaydb.update_one(
+        {"chat_id": chat_id}, {"$set": {"mode": mode}}, upsert=True
+    )
+
+
+async def get_thumb(chat_id: int) -> bool:
+    mode = thumbmode.get(chat_id)
+    if mode is None:
+        data = await thumbdb.find_one({"chat_id": chat_id})
+        if not data:
+            thumbmode[chat_id] = True
+            return True
+        thumbmode[chat_id] = data["mode"]
+        return data["mode"]
+    return mode
+
+
+async def set_thumb(chat_id: int, mode: bool):
+    thumbmode[chat_id] = mode
+    await thumbdb.update_one(
         {"chat_id": chat_id}, {"$set": {"mode": mode}}, upsert=True
     )
 
