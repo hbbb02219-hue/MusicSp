@@ -18,8 +18,23 @@ def changeImageSize(maxWidth, maxHeight, image):
     newImage = image.resize((newWidth, newHeight))
     return newImage
 
-async def gen_thumb(videoid: str):
+async def gen_thumb(videoid: str, chat_id: int = None):
     try:
+        if chat_id is not None:
+            try:
+                from MusicSp.utils.database import get_thumb
+
+                if not await get_thumb(chat_id):
+                    url = f"https://www.youtube.com/watch?v={videoid}"
+                    results = VideosSearch(url, limit=1)
+                    for result in (await results.next())["result"]:
+                        thumbnail_data = result.get("thumbnails")
+                        if thumbnail_data:
+                            return thumbnail_data[0]["url"].split("?")[0]
+                    return None
+            except Exception:
+                pass
+
         if os.path.isfile(f"cache/{videoid}_v4.png"):
             return f"cache/{videoid}_v4.png"
 
