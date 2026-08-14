@@ -45,6 +45,21 @@ counter = {}
 autoplay_history = {}
 
 
+def _normalize_title(title: str) -> str:
+    import re
+
+    t = (title or "").lower()
+    t = re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", t)
+    t = re.sub(
+        r"\b(official|video|audio|lyrics?|lyric|hd|4k|full song|music video|mv|visualizer|hq)\b",
+        " ",
+        t,
+    )
+    t = re.sub(r"[^a-z0-9]+", " ", t).strip()
+    return t
+
+
+
 async def _clear_(chat_id):
     db[chat_id] = []
     autoplay_history.pop(chat_id, None)
@@ -257,8 +272,8 @@ class Call(PyTgCalls):
         )
 
     async def _autoplay(self, client, chat_id, original_chat_id, popped):
-        """Tries to fetch and play a related song when the queue ends and Autoplay is ON.
-        Returns True if a new song was started, else False."""
+        """Tries to fetch and play a genuinely different related song when the
+        queue ends and Autoplay is ON. Returns True if a new song was started."""
         try:
             from py_yt import VideosSearch
 
@@ -267,24 +282,51 @@ class Call(PyTgCalls):
             if not title:
                 return False
 
-            history = autoplay_history.setdefault(chat_id, [])
-            if old_vidid and old_vidid not in history:
-                history.append(old_vidid)
+            history = autoplay_history.setdefault(chat_id, {"ids": [], "titles": []})
+            old_norm = _normalize_title(title)
+            if old_vidid and old_vidid not in history["ids"]:
+                history["ids"].append(old_vidid)
+            if old_norm and old_norm not in history["titles"]:
+                history["titles"].append(old_norm)
 
-            results = VideosSearch(title, limit=10)
-            data = (await results.next()).get("result", [])
+            # Search with a couple of query variants for more variety, since
+            # searching the exact title often just returns re-uploads of the
+            # same song (official/lyrics/audio versions) with different IDs.
+            queries = [title, " ".join(title.split()[:3])]
+            data = []
+            seen_ids = set()
+            for q in queries:
+                if not q.strip():
+                    continue
+                try:
+                    results = VideosSearch(q, limit=15)
+                    for result in (await results.next()).get("result", []):
+                        vid = result.get("id")
+                        if vid and vid not in seen_ids:
+                            seen_ids.add(vid)
+                            data.append(result)
+                except Exception:
+                    continue
+
             pick = None
             for result in data:
                 vid = result.get("id")
-                if vid and vid != old_vidid and vid not in history:
-                    pick = result
-                    break
+                rnorm = _normalize_title(result.get("title", ""))
+                if not vid or vid == old_vidid or vid in history["ids"]:
+                    continue
+                if rnorm and rnorm in history["titles"]:
+                    continue
+                pick = result
+                break
+
             if not pick:
-                # fallback: allow repeats only if nothing fresh is found
+                # relax: allow a title we've seen before, just not the same ID
                 for result in data:
-                    if result.get("id") and result["id"] != old_vidid:
+                    vid = result.get("id")
+                    if vid and vid != old_vidid and vid not in history["ids"]:
                         pick = result
                         break
+
             if not pick:
                 return False
 
@@ -316,8 +358,11 @@ class Call(PyTgCalls):
                 "audio",
             )
 
-            history.append(vidid)
-            autoplay_history[chat_id] = history[-8:]
+            history["ids"].append(vidid)
+            history["titles"].append(_normalize_title(new_title))
+            history["ids"] = history["ids"][-12:]
+            history["titles"] = history["titles"][-12:]
+            autoplay_history[chat_id] = history
 
             try:
                 language = await get_lang(original_chat_id)
