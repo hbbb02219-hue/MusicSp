@@ -1,6 +1,43 @@
-from pyrogram.types import InlineQueryResultArticle, InputTextMessageContent
+from pyrogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    InlineQueryResultArticle,
+    InlineQueryResultPhoto,
+    InputTextMessageContent,
+)
+
+import config
+from MusicSp import app
 
 answer = []
+
+_invite_caption = (
+    f"『 {app.name} 』\n\n"
+    f"❖ 『 {app.name} 』 ♪ — ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴍᴜsɪᴄ sᴛʀᴇᴀᴍᴇʀ ʙᴏᴛ 🎧\n\n"
+    "➤ Fᴀsᴛ • Lᴀɢ Fʀᴇᴇ • Nᴏ Aᴅs 🍃\n"
+    "➤ Aᴜᴛᴏ-Pʟᴀʏ • Aᴜᴅɪᴏ • Vɪᴅᴇᴏ 🎥\n\n"
+    f"➜ Aᴅᴅ 『 {app.name} 』 ♪ Tᴏ Yᴏᴜʀ Gʀᴏᴜᴘ & Eɴᴊᴏʏ Hɪɢʜ Qᴜᴀʟɪᴛʏ Sᴏɴɢs 🎶"
+)
+
+answer.append(
+    InlineQueryResultPhoto(
+        photo_url=config.START_IMG_URL,
+        thumb_url=config.START_IMG_URL,
+        title=f"➕ Add {app.name} to your group",
+        description="Tap to send the invite card in this chat",
+        caption=_invite_caption,
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        text="➕ Add Me In Your Group",
+                        url=f"https://t.me/{app.username}?startgroup=true",
+                    )
+                ]
+            ]
+        ),
+    )
+)
 
 answer.extend(
     [
