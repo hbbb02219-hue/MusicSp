@@ -23,7 +23,12 @@ from MusicSp.utils.database import (
 )
 from MusicSp.utils.decorators.language import languageCB
 from MusicSp.utils.formatters import seconds_to_min
-from MusicSp.utils.inline import close_markup, stream_markup, stream_markup_timer
+from MusicSp.utils.inline import (
+    autoplay_menu_markup,
+    close_markup,
+    stream_markup,
+    stream_markup_timer,
+)
 from MusicSp.utils.stream.autoclear import auto_clean
 from MusicSp.utils.thumbnails import gen_thumb
 from config import (
@@ -403,14 +408,35 @@ async def del_back_playlist(client, CallbackQuery, _):
         else:
             db[chat_id][0]["played"] += step
 
-    elif command == "Autoplay":
+    elif command == "AutoplayMenu":
         current = await get_autoplay(chat_id)
-        await set_autoplay(chat_id, not current)
-        await CallbackQuery.answer(
-            "✅ Aᴜᴛᴏᴘʟᴀʏ ᴏɴ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ"
-            if not current
-            else "❌ Aᴜᴛᴏᴘʟᴀʏ ᴏғғ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ",
-            show_alert=True,
+        menu = autoplay_menu_markup(_, chat_id, current)
+        await CallbackQuery.answer()
+        await CallbackQuery.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(menu)
+        )
+
+    elif command == "AutoplayOn":
+        await set_autoplay(chat_id, True)
+        await CallbackQuery.answer("✅ Aᴜᴛᴏᴘʟᴀʏ ᴏɴ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ", show_alert=True)
+        button = stream_markup(_, chat_id)
+        await CallbackQuery.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(button)
+        )
+
+    elif command == "AutoplayOff":
+        await set_autoplay(chat_id, False)
+        await CallbackQuery.answer("❌ Aᴜᴛᴏᴘʟᴀʏ ᴏғғ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ", show_alert=True)
+        button = stream_markup(_, chat_id)
+        await CallbackQuery.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(button)
+        )
+
+    elif command == "AutoplayClose":
+        await CallbackQuery.answer()
+        button = stream_markup(_, chat_id)
+        await CallbackQuery.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(button)
         )
 
     elif command == "Thumbnail":
