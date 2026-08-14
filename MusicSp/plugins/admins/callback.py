@@ -10,7 +10,6 @@ from MusicSp.utils.database import (
     get_active_chats,
     get_autoplay,
     get_lang,
-    get_thumb,
     get_upvote_count,
     is_active_chat,
     is_music_playing,
@@ -19,7 +18,6 @@ from MusicSp.utils.database import (
     music_on,
     set_autoplay,
     set_loop,
-    set_thumb,
 )
 from MusicSp.utils.decorators.language import languageCB
 from MusicSp.utils.formatters import seconds_to_min
@@ -437,16 +435,6 @@ async def del_back_playlist(client, CallbackQuery, _):
         button = stream_markup(_, chat_id)
         await CallbackQuery.edit_message_reply_markup(
             reply_markup=InlineKeyboardMarkup(button)
-        )
-
-    elif command == "Thumbnail":
-        current = await get_thumb(chat_id)
-        await set_thumb(chat_id, not current)
-        await CallbackQuery.answer(
-            "✅ Cᴜsᴛᴏᴍ ᴛʜᴜᴍʙɴᴀɪʟ ᴏɴ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ"
-            if not current
-            else "❌ Cᴜsᴛᴏᴍ ᴛʜᴜᴍʙɴᴀɪʟ ᴏғғ (ᴘʟᴀɪɴ ᴛʜᴜᴍʙɴᴀɪʟ)",
-            show_alert=True,
         )
 
 
