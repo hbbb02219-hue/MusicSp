@@ -12,6 +12,19 @@ def _rand_style():
     return random.choice(_STYLES)
 
 
+def autoplay_menu_markup(_, chat_id, current: bool):
+    on_text = "✅ On" if current else "On"
+    off_text = "✅ Off" if not current else "Off"
+    buttons = [
+        [
+            InlineKeyboardButton(text=on_text, callback_data=f"ADMIN AutoplayOn|{chat_id}", style=ButtonStyle.SUCCESS),
+            InlineKeyboardButton(text=off_text, callback_data=f"ADMIN AutoplayOff|{chat_id}", style=ButtonStyle.DANGER),
+        ],
+        [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"ADMIN AutoplayClose|{chat_id}", style=ButtonStyle.PRIMARY)],
+    ]
+    return buttons
+
+
 def track_markup(_, videoid, user_id, channel, fplay):
     buttons = [
         [
@@ -82,7 +95,7 @@ def stream_markup_timer(_, chat_id, played, dur):
             InlineKeyboardButton(text="15ˢ+", callback_data=f"ADMIN SeekFwd15|{chat_id}", style=_rand_style()),
         ],
         [
-            InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN Autoplay|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN AutoplayMenu|{chat_id}", style=_rand_style()),
             InlineKeyboardButton(text="🖼 Thumbnail", callback_data=f"ADMIN Thumbnail|{chat_id}", style=_rand_style()),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close",
@@ -107,7 +120,7 @@ def stream_markup(_, chat_id):
             InlineKeyboardButton(text="15ˢ+", callback_data=f"ADMIN SeekFwd15|{chat_id}", style=_rand_style()),
         ],
         [
-            InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN Autoplay|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN AutoplayMenu|{chat_id}", style=_rand_style()),
             InlineKeyboardButton(text="🖼 Thumbnail", callback_data=f"ADMIN Thumbnail|{chat_id}", style=_rand_style()),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close",
