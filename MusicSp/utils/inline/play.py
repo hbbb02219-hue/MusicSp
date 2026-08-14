@@ -96,7 +96,6 @@ def stream_markup_timer(_, chat_id, played, dur):
         ],
         [
             InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN AutoplayMenu|{chat_id}", style=_rand_style()),
-            InlineKeyboardButton(text="🖼 Thumbnail", callback_data=f"ADMIN Thumbnail|{chat_id}", style=_rand_style()),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close",
                               style=ButtonStyle.DANGER,
@@ -121,7 +120,6 @@ def stream_markup(_, chat_id):
         ],
         [
             InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN AutoplayMenu|{chat_id}", style=_rand_style()),
-            InlineKeyboardButton(text="🖼 Thumbnail", callback_data=f"ADMIN Thumbnail|{chat_id}", style=_rand_style()),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close",
                               style=ButtonStyle.DANGER,
