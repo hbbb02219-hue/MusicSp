@@ -8,14 +8,18 @@ from MusicSp.core.call import DevSp
 from MusicSp.misc import SUDOERS, db
 from MusicSp.utils.database import (
     get_active_chats,
+    get_autoplay,
     get_lang,
+    get_thumb,
     get_upvote_count,
     is_active_chat,
     is_music_playing,
     is_nonadmin_chat,
     music_off,
     music_on,
+    set_autoplay,
     set_loop,
+    set_thumb,
 )
 from MusicSp.utils.decorators.language import languageCB
 from MusicSp.utils.formatters import seconds_to_min
@@ -348,6 +352,76 @@ async def del_back_playlist(client, CallbackQuery, _):
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
             await CallbackQuery.edit_message_text(txt, reply_markup=close_markup(_))
+
+    elif command == "SeekBack15" or command == "SeekFwd15":
+        playing = db.get(chat_id)
+        if not playing:
+            return await CallbackQuery.answer(_["queue_2"], show_alert=True)
+        duration_seconds = int(playing[0]["seconds"])
+        if duration_seconds == 0:
+            return await CallbackQuery.answer(_["admin_22"], show_alert=True)
+        file_path = playing[0]["file"]
+        duration_played = int(playing[0]["played"])
+        duration = playing[0]["dur"]
+        step = 15
+        if command == "SeekBack15":
+            if (duration_played - step) <= 10:
+                return await CallbackQuery.answer(
+                    _["admin_23"].format(seconds_to_min(duration_played), duration),
+                    show_alert=True,
+                )
+            to_seek = duration_played - step + 1
+        else:
+            if (duration_seconds - (duration_played + step)) <= 10:
+                return await CallbackQuery.answer(
+                    _["admin_23"].format(seconds_to_min(duration_played), duration),
+                    show_alert=True,
+                )
+            to_seek = duration_played + step + 1
+        await CallbackQuery.answer("⏳ sᴇᴇᴋɪɴɢ...")
+        if "vid_" in file_path:
+            n, file_path = await YouTube.video(playing[0]["vidid"], True)
+            if n == 0:
+                return await CallbackQuery.answer(_["admin_22"], show_alert=True)
+        speed_path = (playing[0]).get("speed_path")
+        if speed_path:
+            file_path = speed_path
+        if "index_" in file_path:
+            file_path = playing[0]["vidid"]
+        try:
+            await DevSp.seek_stream(
+                chat_id,
+                file_path,
+                seconds_to_min(to_seek),
+                duration,
+                playing[0]["streamtype"],
+            )
+        except Exception:
+            return await CallbackQuery.answer(_["admin_26"], show_alert=True)
+        if command == "SeekBack15":
+            db[chat_id][0]["played"] -= step
+        else:
+            db[chat_id][0]["played"] += step
+
+    elif command == "Autoplay":
+        current = await get_autoplay(chat_id)
+        await set_autoplay(chat_id, not current)
+        await CallbackQuery.answer(
+            "✅ Aᴜᴛᴏᴘʟᴀʏ ᴏɴ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ"
+            if not current
+            else "❌ Aᴜᴛᴏᴘʟᴀʏ ᴏғғ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ",
+            show_alert=True,
+        )
+
+    elif command == "Thumbnail":
+        current = await get_thumb(chat_id)
+        await set_thumb(chat_id, not current)
+        await CallbackQuery.answer(
+            "✅ Cᴜsᴛᴏᴍ ᴛʜᴜᴍʙɴᴀɪʟ ᴏɴ ᴋᴀʀ ᴅɪᴀ ɢᴀʏᴀ"
+            if not current
+            else "❌ Cᴜsᴛᴏᴍ ᴛʜᴜᴍʙɴᴀɪʟ ᴏғғ (ᴘʟᴀɪɴ ᴛʜᴜᴍʙɴᴀɪʟ)",
+            show_alert=True,
+        )
 
 
 async def markup_timer():
