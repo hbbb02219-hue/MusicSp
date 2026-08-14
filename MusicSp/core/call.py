@@ -42,10 +42,12 @@ from strings import get_string
 
 autoend = {}
 counter = {}
+autoplay_history = {}
 
 
 async def _clear_(chat_id):
     db[chat_id] = []
+    autoplay_history.pop(chat_id, None)
     await remove_active_video_chat(chat_id)
     await remove_active_chat(chat_id)
 
@@ -265,13 +267,24 @@ class Call(PyTgCalls):
             if not title:
                 return False
 
-            results = VideosSearch(title, limit=5)
+            history = autoplay_history.setdefault(chat_id, [])
+            if old_vidid and old_vidid not in history:
+                history.append(old_vidid)
+
+            results = VideosSearch(title, limit=10)
             data = (await results.next()).get("result", [])
             pick = None
             for result in data:
-                if result.get("id") and result["id"] != old_vidid:
+                vid = result.get("id")
+                if vid and vid != old_vidid and vid not in history:
                     pick = result
                     break
+            if not pick:
+                # fallback: allow repeats only if nothing fresh is found
+                for result in data:
+                    if result.get("id") and result["id"] != old_vidid:
+                        pick = result
+                        break
             if not pick:
                 return False
 
@@ -302,6 +315,9 @@ class Call(PyTgCalls):
                 app.id,
                 "audio",
             )
+
+            history.append(vidid)
+            autoplay_history[chat_id] = history[-8:]
 
             try:
                 language = await get_lang(original_chat_id)
