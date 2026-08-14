@@ -1,8 +1,15 @@
 import math
+import random
 from pyrogram.enums import ButtonStyle
 from pyrogram.types import InlineKeyboardButton
 
 from MusicSp.utils.formatters import time_to_seconds
+
+_STYLES = [ButtonStyle.PRIMARY, ButtonStyle.SUCCESS, ButtonStyle.DANGER]
+
+
+def _rand_style():
+    return random.choice(_STYLES)
 
 
 def track_markup(_, videoid, user_id, channel, fplay):
@@ -57,11 +64,11 @@ def stream_markup_timer(_, chat_id, played, dur):
         bar = "—————————◉"
     buttons = [
         [
-            InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}", style=ButtonStyle.PRIMARY),
-            InlineKeyboardButton(text="II", callback_data=f"ADMIN Pause|{chat_id}", style=ButtonStyle.PRIMARY),
-            InlineKeyboardButton(text="↻", callback_data=f"ADMIN Replay|{chat_id}", style=ButtonStyle.PRIMARY),
-            InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}", style=ButtonStyle.SUCCESS),
-            InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}", style=ButtonStyle.DANGER),
+            InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="II", callback_data=f"ADMIN Pause|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="↻", callback_data=f"ADMIN Replay|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}", style=_rand_style()),
         ],
         [
             InlineKeyboardButton(
@@ -69,6 +76,14 @@ def stream_markup_timer(_, chat_id, played, dur):
                 callback_data="GetTimer",
                  style=ButtonStyle.PRIMARY,
             )
+        ],
+        [
+            InlineKeyboardButton(text="-15ˢ", callback_data=f"ADMIN SeekBack15|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="15ˢ+", callback_data=f"ADMIN SeekFwd15|{chat_id}", style=_rand_style()),
+        ],
+        [
+            InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN Autoplay|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="🖼 Thumbnail", callback_data=f"ADMIN Thumbnail|{chat_id}", style=_rand_style()),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close",
                               style=ButtonStyle.DANGER,
@@ -81,11 +96,19 @@ def stream_markup_timer(_, chat_id, played, dur):
 def stream_markup(_, chat_id):
     buttons = [
         [
-            InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}", style=ButtonStyle.PRIMARY),
-            InlineKeyboardButton(text="II", callback_data=f"ADMIN Pause|{chat_id}", style=ButtonStyle.PRIMARY),
-            InlineKeyboardButton(text="↻", callback_data=f"ADMIN Replay|{chat_id}", style=ButtonStyle.PRIMARY),
-            InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}", style=ButtonStyle.SUCCESS),
-            InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}", style=ButtonStyle.DANGER),
+            InlineKeyboardButton(text="▷", callback_data=f"ADMIN Resume|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="II", callback_data=f"ADMIN Pause|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="↻", callback_data=f"ADMIN Replay|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="▢", callback_data=f"ADMIN Stop|{chat_id}", style=_rand_style()),
+        ],
+        [
+            InlineKeyboardButton(text="-15ˢ", callback_data=f"ADMIN SeekBack15|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="15ˢ+", callback_data=f"ADMIN SeekFwd15|{chat_id}", style=_rand_style()),
+        ],
+        [
+            InlineKeyboardButton(text="🎵 Autoplay", callback_data=f"ADMIN Autoplay|{chat_id}", style=_rand_style()),
+            InlineKeyboardButton(text="🖼 Thumbnail", callback_data=f"ADMIN Thumbnail|{chat_id}", style=_rand_style()),
         ],
         [InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close",
                               style=ButtonStyle.DANGER,
