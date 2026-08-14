@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Union
 
+import yt_dlp
 from pyrogram import Client
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, StreamType
@@ -57,6 +58,26 @@ def _normalize_title(title: str) -> str:
     )
     t = re.sub(r"[^a-z0-9]+", " ", t).strip()
     return t
+
+
+def _fetch_related_sync(vidid: str):
+    """Fetches YouTube's own 'Mix/Radio' (RD) playlist for a video — the same
+    pool YouTube itself uses for autoplay. Far more reliable than a text
+    search, since it won't just surface re-uploads of the same song."""
+    try:
+        ydl_opts = {
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": True,
+            "skip_download": True,
+            "playlistend": 20,
+        }
+        url = f"https://www.youtube.com/watch?v={vidid}&list=RD{vidid}"
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        return info.get("entries") or []
+    except Exception:
+        return []
 
 
 
@@ -275,11 +296,9 @@ class Call(PyTgCalls):
         """Tries to fetch and play a genuinely different related song when the
         queue ends and Autoplay is ON. Returns True if a new song was started."""
         try:
-            from py_yt import VideosSearch
-
             title = popped.get("title") or ""
             old_vidid = popped.get("vidid")
-            if not title:
+            if not title or not old_vidid:
                 return False
 
             history = autoplay_history.setdefault(chat_id, {"ids": [], "titles": []})
@@ -289,50 +308,47 @@ class Call(PyTgCalls):
             if old_norm and old_norm not in history["titles"]:
                 history["titles"].append(old_norm)
 
-            # Search with a couple of query variants for more variety, since
-            # searching the exact title often just returns re-uploads of the
-            # same song (official/lyrics/audio versions) with different IDs.
-            queries = [title, " ".join(title.split()[:3])]
-            data = []
-            seen_ids = set()
-            for q in queries:
-                if not q.strip():
-                    continue
-                try:
-                    results = VideosSearch(q, limit=15)
-                    for result in (await results.next()).get("result", []):
-                        vid = result.get("id")
-                        if vid and vid not in seen_ids:
-                            seen_ids.add(vid)
-                            data.append(result)
-                except Exception:
-                    continue
+            # Primary source: YouTube's own Mix/Radio (RD) playlist for the
+            # song that just ended — this is what YouTube itself uses for
+            # autoplay, so it naturally avoids looping the same track.
+            entries = await asyncio.to_thread(_fetch_related_sync, old_vidid)
 
-            pick = None
-            for result in data:
-                vid = result.get("id")
-                rnorm = _normalize_title(result.get("title", ""))
-                if not vid or vid == old_vidid or vid in history["ids"]:
-                    continue
-                if rnorm and rnorm in history["titles"]:
-                    continue
-                pick = result
-                break
+            def _find_pick(pool, allow_seen_title=False):
+                for e in pool:
+                    vid = e.get("id")
+                    if not vid or vid == old_vidid or vid in history["ids"]:
+                        continue
+                    if not allow_seen_title:
+                        rnorm = _normalize_title(e.get("title") or "")
+                        if rnorm and rnorm in history["titles"]:
+                            continue
+                    return e
+                return None
+
+            pick = _find_pick(entries) or _find_pick(entries, allow_seen_title=True)
 
             if not pick:
-                # relax: allow a title we've seen before, just not the same ID
-                for result in data:
-                    vid = result.get("id")
-                    if vid and vid != old_vidid and vid not in history["ids"]:
-                        pick = result
-                        break
+                # Fallback: plain text search, only if the Mix playlist
+                # couldn't be fetched (rare — e.g. network hiccup).
+                try:
+                    from py_yt import VideosSearch
+
+                    results = VideosSearch(title, limit=15)
+                    data = (await results.next()).get("result", [])
+                except Exception:
+                    data = []
+                pick = _find_pick(data) or _find_pick(data, allow_seen_title=True)
 
             if not pick:
                 return False
 
             vidid = pick["id"]
-            new_title = pick.get("title", title)
-            duration_min = pick.get("duration") or "0:00"
+            new_title = pick.get("title") or title
+            dur_seconds = pick.get("duration")
+            if isinstance(dur_seconds, (int, float)) and dur_seconds:
+                duration_min = seconds_to_min(int(dur_seconds))
+            else:
+                duration_min = pick.get("duration") or "0:00"
 
             file_path, direct = await YouTube.download(vidid, None, videoid=True)
             if not file_path:
