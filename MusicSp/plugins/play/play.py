@@ -44,9 +44,33 @@ async def play_commnd(
     url,
     fplay,
 ):
-    mystic = await message.reply_text(
-        _["play_2"].format(channel) if channel else _["play_1"]
-    )
+    query_preview = None
+    try:
+        query_preview = message.text.split(None, 1)[1].strip()
+    except (IndexError, AttributeError):
+        query_preview = None
+    if message.reply_to_message and (
+        message.reply_to_message.audio or message.reply_to_message.voice
+    ):
+        media = message.reply_to_message.audio or message.reply_to_message.voice
+        query_preview = (
+            getattr(media, "file_name", None)
+            or getattr(media, "title", None)
+            or query_preview
+        )
+
+    if channel:
+        search_caption = _["play_2"].format(channel)
+    elif query_preview:
+        search_caption = (
+            "🎧 <b>Sᴇᴀʀᴄʜɪɴɢ Yᴏᴜʀ Tʀᴀᴄᴋ</b> 🎧\n\n"
+            f"<blockquote>🎶 {query_preview[:60]}</blockquote>\n\n"
+            "<i>ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ, ғᴇᴛᴄʜɪɴɢ ʏᴏᴜʀ sᴏɴɢ...</i> ✨"
+        )
+    else:
+        search_caption = _["play_1"]
+
+    mystic = await message.reply_text(search_caption)
     plist_id = None
     slider = None
     plist_type = None
@@ -451,7 +475,10 @@ async def play_music(client, CallbackQuery, _):
     except:
         pass
     mystic = await CallbackQuery.message.reply_text(
-        _["play_2"].format(channel) if channel else _["play_1"]
+        _["play_2"].format(channel)
+        if channel
+        else "🎧 <b>Fᴇᴛᴄʜɪɴɢ Yᴏᴜʀ Tʀᴀᴄᴋ</b> 🎧\n\n"
+        "<blockquote>🎶 Pʟᴇᴀsᴇ ᴡᴀɪᴛ, ʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ sᴇʟᴇᴄᴛᴇᴅ sᴏɴɢ...</blockquote>"
     )
     try:
         details, track_id = await YouTube.track(vidid, True)
@@ -539,7 +566,10 @@ async def play_playlists_command(client, CallbackQuery, _):
     except:
         pass
     mystic = await CallbackQuery.message.reply_text(
-        _["play_2"].format(channel) if channel else _["play_1"]
+        _["play_2"].format(channel)
+        if channel
+        else "🎧 <b>Fᴇᴛᴄʜɪɴɢ Yᴏᴜʀ Tʀᴀᴄᴋ</b> 🎧\n\n"
+        "<blockquote>🎶 Pʟᴇᴀsᴇ ᴡᴀɪᴛ, ʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ sᴇʟᴇᴄᴛᴇᴅ sᴏɴɢ...</blockquote>"
     )
     videoid = lyrical.get(videoid)
     video = True if mode == "v" else None
